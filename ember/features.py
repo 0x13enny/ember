@@ -512,18 +512,20 @@ class PEFeatureExtractor(object):
             raise Exception(f"EMBER feature version must be 1 or 2. Not {feature_version}")
         self.dim = sum([fe.dim for fe in self.features])
 
-    def raw_features(self, bytez):
+    def raw_features(self, bytez, path, label=-1):
         lief_errors = (lief.bad_format, lief.bad_file, lief.pe_error, lief.parser_error, lief.read_out_of_bound,
                        RuntimeError)
         try:
-            lief_binary = lief.PE.parse(list(bytez))
+            # lief_binary = lief.PE.parse(list(bytez))
+            lief_binary = lief.PE.parse(path)
+
         except lief_errors as e:
             print("lief error: ", str(e))
             lief_binary = None
         except Exception:  # everything else (KeyboardInterrupt, SystemExit, ValueError):
             raise
 
-        features = {"sha256": hashlib.sha256(bytez).hexdigest()}
+        features = {"sha256": hashlib.sha256(bytez).hexdigest(),"label":label}
         features.update({fe.name: fe.raw_features(bytez, lief_binary) for fe in self.features})
         return features
 
@@ -531,5 +533,7 @@ class PEFeatureExtractor(object):
         feature_vectors = [fe.process_raw_features(raw_obj[fe.name]) for fe in self.features]
         return np.hstack(feature_vectors).astype(np.float32)
 
-    def feature_vector(self, bytez):
-        return self.process_raw_features(self.raw_features(bytez))
+    def feature_vector(self, bytez, path, label=-1):
+        return self.process_raw_features(self.raw_features(bytez, path, label=label))
+
+
